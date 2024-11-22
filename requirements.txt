@@ -1,0 +1,4 @@
+playwright==1.37.0
+yt-dlp
+aiogram
+dotenv-python
