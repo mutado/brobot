@@ -1,30 +1,33 @@
 import asyncio
+from decimal import Decimal
 import os
 import random
 import re
+import sqlite3
 import time
 from aiogram import Bot, Dispatcher, html
 from aiogram.client.default import DefaultBotProperties
-from aiogram.filters import CommandStart, Command
+from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.enums import ParseMode
 from aiogram.types import Message, FSInputFile
 import aiohttp
 from dotenv import load_dotenv
 import requests
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
+from db import getDBConnection
 from downloader import download_video
+from models.user import Asset, User
+from quotes import quotes
 
 load_dotenv()
 
 TOKEN = os.getenv("BOT_TOKEN")
 
-p_game = {
-    421348308: {
-        "length": 10,
-        "name": "Nazar Potipaka",
-        "last_played": 0
-    }
-}
+engine = create_engine('sqlite:///db.sqlite3')
+Session = sessionmaker(bind=engine)
+session = Session()
 
 
 def validate_tiktok(url: str) -> bool:
@@ -81,25 +84,40 @@ async def command_start_handler(message: Message) -> None:
 @dp.message(Command("accept"))
 async def command_accept_handler(message: Message) -> None:
     await message.answer(f"Дякую. Дані про вас були передані в СБУ.")
+
+def getUser(message: Message):
+    user = session.query(User).filter_by(id=message.from_user.id).first()
+
+    if user is None:
+        user = User(
+            id=message.from_user.id,
+            name=message.from_user.full_name,
+            p_length=15,
+            last_played=0,
+            balance=0,
+            created_at=int(time.time())
+        )
+        session.add(user)
+        session.commit()
     
+    return user
+
 @dp.message(Command("penis"))
 async def command_pgame_handler(message: Message) -> None:
     userId = message.from_user.id
-    if userId not in p_game:
-        p_game[userId] = {
-            "length": 0,
-            "name": message.from_user.full_name,
-            "last_played": 0
-        }
+
+
+    user = getUser(message)
     
+
     # if user played less than 12 hours ago, don't let them play
-    if p_game[userId]["last_played"] + 12 * 60 * 60 > time.time():
-        await message.answer(f"Ти вже грав, почекай ще {int(p_game[userId]['last_played'] + 12 * 60 * 60 - time.time())} секунд")
+    if user.last_played + 12 * 60 * 60 > time.time():
+        await message.answer(f"Ти вже грав, почекай ще {int(user.last_played + 12 * 60 * 60 - time.time())} секунд")
         return
-    
+
     # get the chance
     percent = random.randint(0, 100)
-    
+
     if percent < 25:
         # if less than 25%, huge loss
         score = random.randint(-10, 5)
@@ -110,9 +128,10 @@ async def command_pgame_handler(message: Message) -> None:
         # if more than 75%, huge win
         score = random.randint(5, 15)
     
-    p_game[userId]["length"] += score
-    p_game[userId]["last_played"] = time.time()
-    
+    user.p_length = user.p_length + score
+    user.last_played = int(time.time())
+    session.commit()
+
     template = None
     if score < 0:
         template = "Невдача! Твій хуй зменьшився на {} см."
@@ -124,24 +143,136 @@ async def command_pgame_handler(message: Message) -> None:
         template = "Потужна перемога! Твій хуй збільшився на {} см."
     else:
         template = "Епічна потужність!!! Твій хуй збільшився на {} см."
-        
-    await message.answer(template.format(score))        
-        
+
+    await message.answer(template.format(score))
+
+
 @dp.message(Command("results"))
 async def command_score_handler(message: Message) -> None:
-    # respond with all the scores sorted by length
-    scores = sorted(p_game.items(), key=lambda x: x[1]["length"], reverse=True)
-    print(scores)
+    users = session.query(User).order_by(User.p_length.desc()).all()
+
     response = "Результати гри:\n"
-    for i, (userId, data) in enumerate(scores):
-        response += f"{i + 1}. {data['name']} - {data['length']} см\n"
+    for i, user in enumerate(users):
+        response += f"{i + 1}. {user.name} - {user.p_length} см\n"
+
     await message.answer(response)
 
+@dp.message(Command("quote"))
+async def command_quote_handler(message: Message) -> None:
+    response = random.choice(quotes)
+    await message.answer(response + "\n©️ Игорь Войтенко")
+
+@dp.message(Command("portfolio"))
+async def command_portfolio_handler(message: Message) -> None:
+    userId = message.from_user.id
+
+    user = getUser(message)
+
+    response = f"Твій хуй: {user.p_length} см\n"
+    response += f"Баланс: {user.balance} usd\n"
+    
+    assets = user.assets
+    
+    if len(assets) == 0:
+        response += "У тебе немає активів."
+    else:
+        response += "Твої активи:\n"
+        for i, asset in enumerate(assets):
+            response += f"{i + 1}. {asset.stock_name} - {asset.amount} акцій\n"
+
+    await message.answer(response)
+    
+@dp.message(Command("buy"))
+async def command_buy_handler(message: Message,command: CommandObject) -> None:
+    args = command.args.split(" ")
+    userId = message.from_user.id
+    user = getUser(message)
+
+    if len(args) < 1:
+        await message.answer("Введіть назву акції та кількість акцій для покупки.")
+        return
+
+    # # get the stock name
+    stock_name = args[0]
+    amount = int(args[1] if len(args) > 1 else 1)
+    
+    async with aiohttp.ClientSession() as apiSession:
+        # get price of the stock
+        response = await apiSession.get(f"https://api.coincap.io/v2/rates/{stock_name}")
+        response = await response.json()
+        if response['data'] is None:
+            await message.answer("Акція не знайдена.")
+            return
+        price = float(response['data']['rateUsd'])
+        
+        # check if user has enough balance
+        if user.balance < price * amount:
+            await message.answer("У вас недостатньо коштів.")
+            return
+        
+        # create the asset
+        asset = Asset(
+            id=str(random.randint(100000, 999999)),
+            user_id=user.id,
+            stock_name=stock_name,
+            amount=amount,
+            price_bought_at=price,
+            created_at=int(time.time()),
+            sold_at=0,
+            price_sold_at=0
+        )
+        
+        user.balance = user.balance - Decimal(price * amount)
+        session.add(asset)
+        session.commit()
+        
+        await message.answer(f"Куплено {amount} акцій {stock_name} за {price * amount} usd.")
+
+@dp.message(Command("sell"))
+async def command_sell_handler(message: Message,command: CommandObject) -> None:
+    args = command.args.split(" ")
+    userId = message.from_user.id
+    user = getUser(message)
+
+    if len(args) < 1:
+        await message.answer("Введіть назву акції та кількість акцій для продажу.")
+        return
+
+    # get the stock name
+    stock_name = args[0]
+    amount = int(args[1] if len(args) > 1 else 1)
+    
+    # get the asset
+    asset = session.query(Asset).filter_by(user_id=user.id, stock_name=stock_name).first()
+    
+    if asset is None:
+        await message.answer("У вас немає таких акцій.")
+        return
+    
+    if asset.amount < amount:
+        await message.answer("У вас недостатньо акцій.")
+        return
+    
+    async with aiohttp.ClientSession() as apiSession:
+        # get price of the stock
+        response = await apiSession.get(f"https://api.coincap.io/v2/rates/{stock_name}")
+        response = await response.json()
+        if response['data'] is None:
+            await message.answer("Акція не знайдена.")
+            return
+        price = float(response['data']['rateUsd'])
+        
+        # update the asset
+        asset.amount = asset.amount - amount
+        user.balance = user.balance + Decimal(price * amount)
+        session.commit()
+        
+        await message.answer(f"Продано {amount} акцій {stock_name} за {price * amount} usd.")
 
 @dp.message()
 async def message_handler(message: Message) -> None:
     print(message.text)
-    return;
+    return
     if message.content_type == 'text':
         if is_url(message.text):
             if is_valid_url(message.text):
