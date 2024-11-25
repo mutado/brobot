@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE `User` ADD COLUMN `moneyPerClick` DECIMAL(10, 2) NOT NULL DEFAULT 1,
+    ADD COLUMN `moneyPerSecond` DECIMAL(10, 2) NOT NULL DEFAULT 0;

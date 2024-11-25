@@ -1,0 +1,63 @@
+[
+    {
+        "type": "ask-money-from-parents",
+        "name": "Навчитись просити гроші у баті",
+        "description": "Тепер ти можеш просити більше грошей у батьків",
+        "money": 100,
+        "upgradeMoney": 1
+    },
+    {
+        "type": "ask-danya-to-buy-something",
+        "name": "Просити Даню купити Біг Бургер™️",
+        "description": "Зачем платити за їду коли є Даня?",
+        "money": 1000,
+        "upgradeMoney": 5
+    },
+    {
+        "type": "go-home-in-the-middle-of-the-day",
+        "name": "Піти додому бо в тебе Англійська",
+        "description": "Зачем гуляти коли Даня і так вже все купив?",
+        "money": 5000,
+        "upgradeMoney": 10
+    },
+    {
+        "type": "go-on-dancing-lessons",
+        "name": "Ходити на танці",
+        "description": "Якщо частіше ходити на танці, то можна частіше просити купити поїсти.",
+        "money": 100000,
+        "upgradeMoney": 10
+    },
+    {
+        "type": "buy-cs",
+        "name": "Купити CS",
+        "description": "Не дає прибутку, але відкриває нові можливості...",
+        "money": 250000,
+        "upgradeMoney": 0,
+        "max": 1
+    },
+    {
+        "type": "play-cs",
+        "name": "Пограти в CS",
+        "description": "Можливо ти станеш професіоналом?",
+        "money": 250000,
+        "reqs": {
+            "buy-cs": 1
+        }
+    },
+    {
+        "type": "open-case",
+        "name": "Купити кейс",
+        "description": "Що в ньому? Ніхто не знає...",
+        "money": 250000,
+        "upgradeMoney": 0,
+        "reqs": {
+            "buy-cs": 1
+        }
+    },
+    {
+        "type": "open-casino",
+        "name": "Відкрити казино в САМПІ",
+        "description": "Настояща прібиль",
+        "money": 1000000000
+    }
+]

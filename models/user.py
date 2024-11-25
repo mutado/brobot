@@ -16,6 +16,7 @@ class User(Base):
     p_length: Mapped[int] = mapped_column(Integer)
     last_played: Mapped[int] = mapped_column(Integer)
     balance: Mapped[float] = mapped_column(DECIMAL(10, 2))
+    social_credit: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[int] = mapped_column(Integer)
 
     assets: Mapped[List["Asset"]] = relationship(

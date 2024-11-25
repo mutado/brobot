@@ -1,0 +1,30 @@
+-- CreateTable
+CREATE TABLE `User` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `name` VARCHAR(255) NOT NULL,
+    `pLength` INTEGER NOT NULL DEFAULT 10,
+    `pLastPlayed` DATETIME(3) NULL,
+    `balance` DECIMAL(10, 2) NOT NULL DEFAULT 1000,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Asset` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `userId` BIGINT NOT NULL,
+    `stockName` VARCHAR(191) NOT NULL,
+    `stockSymbol` VARCHAR(10) NOT NULL,
+    `quantity` INTEGER UNSIGNED NOT NULL,
+    `buyPrice` DECIMAL(10, 2) NOT NULL,
+    `buyDate` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `sellPrice` DECIMAL(10, 2) NULL,
+    `sellDate` DATETIME(3) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- AddForeignKey
+ALTER TABLE `Asset` ADD CONSTRAINT `Asset_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;

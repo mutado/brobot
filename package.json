@@ -1,0 +1,24 @@
+{
+  "name": "brobot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/mutado/brobot.git",
+  "author": "Nazar Potipaka <mutado.nzr@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "build:watch": "tsc -w -p tsconfig.json"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "@types/node": "^22.9.3",
+    "dotenv": "^16.4.5",
+    "grammy": "^1.32.0",
+    "prisma": "^5.22.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2"
+  }
+}

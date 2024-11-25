@@ -112,7 +112,7 @@ async def command_pgame_handler(message: Message) -> None:
 
     # if user played less than 12 hours ago, don't let them play
     if user.last_played + 12 * 60 * 60 > time.time():
-        await message.answer(f"Ти вже грав, почекай ще {int(user.last_played + 12 * 60 * 60 - time.time())} секунд")
+        await message.answer(f"Ти вже грав, почекай ще {int(user.last_played + 12 * 60 * 60 - time.time()) * 1000} мілісекунд.")
         return
 
     # get the chance
@@ -272,7 +272,6 @@ async def command_sell_handler(message: Message,command: CommandObject) -> None:
 @dp.message()
 async def message_handler(message: Message) -> None:
     print(message.text)
-    return
     if message.content_type == 'text':
         if is_url(message.text):
             if is_valid_url(message.text):
@@ -301,9 +300,53 @@ async def message_handler(message: Message) -> None:
                     url="http://127.0.0.1:11434/api/generate",
                     json={
                         "model": "mistral",
-                        "prompt": fr"""Response to the following message:
-                        User: {message.text}
-                        Response should be funny and sarcastic.
+                        "prompt": fr"""
+                        You are a specialized message evaluator that analyzes user messages
+                        based on their sentiment towards governments and countries.
+                        Your task is to categorize each message into one of three categories:
+                        Good, Bad, or Neutral.
+                        EVALUATION CRITERIA:
+
+                        Good Messages (Score: higher than 0):
+                        Positive statements about any government's policies, initiatives, or achievements
+                        Praise for a country's culture, heritage, or contributions
+                        Constructive suggestions for government improvement
+                        Recognition of international cooperation or diplomatic success
+                        Acknowledgment of public service effectiveness
+                        Celebration of national achievements or progress
+
+                        Bad Messages (Score: less than 0):
+                        Negative statements about government policies or actions
+                        Criticism of a country's systems or institutions
+                        Expressions of dissatisfaction with public services
+                        Comments about government inefficiency or corruption
+                        Negative comparisons between countries
+                        Statements promoting conflict between nations
+
+                        Neutral Messages (Score: 0):
+                        Messages that don't mention governments or countries
+                        Factual statements without clear sentiment
+                        Personal topics unrelated to governments/countries
+                        General discussions about non-political subjects
+                        Weather-related comments
+                        Personal greetings or casual conversation
+
+                        EVALUATION FORMAT:
+                        For each message from user, provide:
+
+                        Category: [Good/Bad/Neutral]
+                        Reasoning: Brief explanation for the categorization
+                        Key Terms: Relevant words/phrases that influenced the decision
+                        Score: [Number between -10 and 10]
+                        
+                        SPECIAL CASES:
+                        
+                        In some cases scores may be higher than 10 or lower than -10.
+                        This is acceptable if the message is exceptionally positive or negative.
+
+                        MESSAGE:
+                        Given the message: "{message.text}"
+                        Please evaluate it according to the criteria above and provide a complete evaluation.
                         """,
                         "stream": False
                     },
